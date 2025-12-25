@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: app-api-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=app_api
+      - POSTGRES_PASSWORD=changeme
+      - POSTGRES_DB=app_api_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-api-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_api -d app_api_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  be-dev:
+    build:
+      context: ./be
+      dockerfile: Dockerfile.dev
+    container_name: app-api-be-dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./be:/app
+    environment:
+      - PORT=8080
+      - CORS_ORIGIN=http://localhost:5173
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=app_api
+      - DB_PASSWORD=changeme
+      - DB_NAME=app_api_db
+      - DB_SSLMODE=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-api-network
+    restart: unless-stopped
+
+  fe-dev:
+    build:
+      context: ./fe
+      dockerfile: Dockerfile.dev
+    container_name: app-api-fe-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./fe:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    depends_on:
+      - be-dev
+    networks:
+      - app-api-network
+    restart: unless-stopped
+
+networks:
+  app-api-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

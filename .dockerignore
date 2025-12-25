@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env
+.env.local
+README.md
+CLAUDE.md
+.claude
+*.log
+node_modules
+dist

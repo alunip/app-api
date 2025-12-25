@@ -1,0 +1,35 @@
+services:
+  be-prod:
+    build:
+      context: ./be
+      dockerfile: Dockerfile
+      target: production
+    container_name: app-api-be-prod
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - CORS_ORIGIN=http://localhost
+    networks:
+      - app-api-network
+    restart: unless-stopped
+
+  fe-prod:
+    build:
+      context: ./fe
+      dockerfile: Dockerfile
+      target: production
+    container_name: app-api-fe-prod
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    depends_on:
+      - be-prod
+    networks:
+      - app-api-network
+    restart: unless-stopped
+
+networks:
+  app-api-network:
+    driver: bridge
