@@ -1,34 +1,45 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
+import { useConfig } from './hooks/useConfig'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { data, loading, error, refetch } = useConfig()
+
+  if (loading) {
+    return (
+      <div className="app">
+        <h1>Loading configuration...</h1>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="app">
+        <h1>Error loading configuration</h1>
+        <p style={{ color: 'red' }}>{error.message}</p>
+        <button onClick={refetch}>Retry</button>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="app">
+        <h1>No configuration data available</h1>
+        <button onClick={refetch}>Retry</button>
+      </div>
+    )
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="app">
+      <h1>Application Configuration</h1>
+      <div className="config-info">
+        <p><strong>Name:</strong> {data.name}</p>
+        <p><strong>Version:</strong> {data.version}</p>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+      <button onClick={refetch}>Refresh Configuration</button>
+    </div>
   )
 }
 
