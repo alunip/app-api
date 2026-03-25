@@ -2,35 +2,91 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Structure
+## Project Overview
 
-This is a full-stack car tracking application with:
-- **Frontend (`fe/`)**: React 19 + TypeScript + Vite application
-- **Backend (`be/`)**: Go 1.23 application (module: `andersonlira.com/base`)
+This is a full-stack web application with a Go backend (`be/`) and React TypeScript frontend (`fe/`). The application uses PostgreSQL for data persistence and Docker Compose for orchestration.
 
-### Frontend Architecture
+## Architecture
 
-The frontend follows a standard React project structure with organized directories:
-- `src/components/` - Reusable React components
-- `src/pages/` - Page-level components
-- `src/routes/` - Routing configuration
-- `src/hooks/` - Custom React hooks
-- `src/services/` - API and external service integrations
-- `src/utils/` - Utility functions and helpers
+### Backend (Go)
+- **Framework**: Standard library `net/http` with custom routing
+- **Database**: PostgreSQL with pgx/v5 driver (connection pooling via pgxpool)
+- **Migrations**: golang-migrate/migrate handles database schema versioning
+- **Structure**:
+  - `main.go`: Application entry point with server setup and graceful shutdown
+  - `db/`: Database connection pool, configuration, and migration runner
+  - `handlers/`: HTTP request handlers with standardized JSON responses
+  - `middleware/`: CORS and other middleware
+  - `migrations/`: SQL migration files (up/down pattern)
+  - `models/`: Data models (currently minimal)
 
-Currently these directories are empty placeholders, indicating early stage development.
+### Frontend (React + TypeScript)
+- **Build Tool**: Vite with hot module replacement
+- **HTTP Client**: Axios with interceptors configured in `services/api.ts`
+- **Structure**:
+  - `src/components/`: Reusable React components
+  - `src/pages/`: Page-level components
+  - `src/services/`: API communication layer
+  - `src/hooks/`: Custom React hooks
+  - `src/models/`: TypeScript type definitions
+  - `src/routes/`: Routing configuration
+  - `src/utils/`: Utility functions
+
+### Key Design Patterns
+- Backend uses standard HTTP handler functions with CORS middleware wrapping
+- All API responses follow a consistent format: `{data, error, timestamp}`
+- Database migrations run automatically on backend startup
+- Backend implements graceful shutdown with signal handling (SIGINT/SIGTERM)
+- Frontend uses environment variables for API URL configuration (`VITE_API_URL`)
 
 ## Development Commands
 
-### Frontend (fe/)
-
-Navigate to `fe/` directory before running these commands:
-
+### Docker-based Development (Recommended)
 ```bash
-# Install dependencies (first time setup)
+# Start all services (backend, frontend, postgres)
+docker-compose up
+
+# Start in detached mode
+docker-compose up -d
+
+# View logs
+docker-compose logs -f be-dev    # Backend logs
+docker-compose logs -f fe-dev    # Frontend logs
+docker-compose logs -f postgres  # Database logs
+
+# Stop services
+docker-compose down
+
+# Rebuild containers after dependency changes
+docker-compose up --build
+```
+
+### Backend (Go)
+```bash
+cd be
+
+# Run locally (requires PostgreSQL)
+go run .
+
+# Build binary
+go build -o app-api .
+
+# Add dependencies
+go get <package>
+go mod tidy
+
+# Run with Air (hot reload) - used by docker-compose
+air -c .air.toml
+```
+
+### Frontend (React + TypeScript)
+```bash
+cd fe
+
+# Install dependencies
 npm install
 
-# Start development server with HMR
+# Development server (http://localhost:5173)
 npm run dev
 
 # Build for production
@@ -43,34 +99,61 @@ npm run preview
 npm run lint
 ```
 
-The frontend build process runs TypeScript compilation (`tsc -b`) before Vite build.
-
-### Backend (be/)
-
-The backend uses Go 1.23. Standard Go commands apply:
+### Database Migrations
+Migrations run automatically on backend startup. To create new migrations:
 
 ```bash
-# Run the application (from be/ directory)
-go run .
+cd be/migrations
 
-# Build the application
-go build
-
-# Run tests
-go test ./...
-
-# Format code
-go fmt ./...
+# Create migration files (manual process)
+# Follow naming: XXXXXX_description.up.sql and XXXXXX_description.down.sql
+# Example: 000003_add_users_table.up.sql
 ```
 
-## Technical Stack
+## Environment Configuration
 
-### Frontend
-- **React 19.2** with React DOM
-- **Vite 7.2** for build tooling and dev server
-- **TypeScript 5.9** for type safety
-- **ESLint** with TypeScript support and React plugins
-- Vite plugin using Babel for Fast Refresh
+Copy `.env.example` to `.env` and adjust values as needed. Key variables:
 
-### Backend
-- **Go 1.23** (module name: `andersonlira.com/base`)
+**Backend:**
+- `PORT`: Server port (default: 8080)
+- `CORS_ORIGIN`: Allowed CORS origin
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`: PostgreSQL connection
+- `DB_SSLMODE`: SSL mode for database (disable for local development)
+- `DB_MAX_OPEN_CONNS`, `DB_MAX_IDLE_CONNS`: Connection pool settings
+
+**Frontend:**
+- `VITE_API_URL`: Backend API URL (e.g., http://localhost:8080)
+
+## Production Deployment
+
+```bash
+# Build and run production containers
+docker-compose -f docker-compose.prod.yml up -d
+
+# Production backend runs on port 8080
+# Production frontend (Nginx) runs on port 80
+```
+
+Note: The production setup does NOT include PostgreSQL in `docker-compose.prod.yml` - database must be configured separately.
+
+## API Endpoints
+
+- `GET /api/health` - Health check with database connectivity status
+- `GET /api/config` - Fetch application configuration from database
+
+All responses follow this structure:
+```json
+{
+  "data": { ... },
+  "error": "error message" | null,
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
+## Important Notes
+
+- Backend uses Air for hot reloading in development (configured via `.air.toml`)
+- Frontend Vite dev server must bind to `0.0.0.0` inside Docker containers
+- Database migrations are embedded and run automatically on startup
+- Backend implements connection pooling with health checks and max connection limits
+- All HTTP handlers should use context with timeout for database operations

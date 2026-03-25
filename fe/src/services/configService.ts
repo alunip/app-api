@@ -9,7 +9,7 @@ import type { AppConfig } from '../models/config';
  */
 export const getConfig = async (): Promise<AppConfig> => {
   try {
-    const response = await api.get<ApiResponse<AppConfig>>('/config');
+    const response = await api.get<ApiResponse<AppConfig>>('api/config');
 
     if (response.data.error) {
       throw new Error(response.data.error);
