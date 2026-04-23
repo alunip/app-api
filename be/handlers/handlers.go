@@ -8,26 +8,24 @@ import (
 	"time"
 )
 
-// Response represents the standard API response format
 type Response struct {
 	Data      interface{} `json:"data,omitempty"`
 	Error     *string     `json:"error,omitempty"`
 	Timestamp string      `json:"timestamp"`
 }
 
-// HealthCheck handles the health check endpoint
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Check database connectivity
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
 	dbStatus := "ok"
-	if err := db.Pool.Ping(ctx); err != nil {
+	sqlDB, err := db.DB.DB()
+	if err != nil || sqlDB.PingContext(ctx) != nil {
 		dbStatus = "unavailable"
 	}
 
@@ -41,29 +39,23 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, data, http.StatusOK)
 }
 
-// AppConfig represents application configuration for API responses
 type AppConfig struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
 
-// GetConfigHandler handles the config retrieval endpoint
 func GetConfigHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-	defer cancel()
-
-	dbConfig, err := db.GetAppConfig(ctx)
+	dbConfig, err := db.GetAppConfig()
 	if err != nil {
 		writeError(w, "Failed to fetch configuration", http.StatusInternalServerError)
 		return
 	}
 
-	// Convert db.AppConfig to handlers.AppConfig
 	config := AppConfig{
 		Name:    dbConfig.Name,
 		Version: dbConfig.Version,
@@ -71,8 +63,6 @@ func GetConfigHandler(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, config, http.StatusOK)
 }
-
-// Helper functions
 
 func writeJSON(w http.ResponseWriter, data interface{}, status int) {
 	response := Response{

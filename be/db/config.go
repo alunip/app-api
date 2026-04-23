@@ -1,47 +1,35 @@
 package db
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	"gorm.io/gorm"
 )
 
-// AppConfig represents the application configuration
 type AppConfig struct {
-	ID        int       `json:"id"`
+	ID        int       `json:"id" gorm:"primaryKey"`
 	Name      string    `json:"name"`
 	Version   string    `json:"version"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-var (
-	ErrConfigNotFound = errors.New("config not found")
-)
+func (AppConfig) TableName() string {
+	return "app_config"
+}
 
-// GetAppConfig retrieves the singleton application configuration
-func GetAppConfig(ctx context.Context) (*AppConfig, error) {
-	query := `
-		SELECT id, name, version, created_at, updated_at
-		FROM app_config
-		WHERE id = 1
-	`
+var ErrConfigNotFound = errors.New("config not found")
 
+func GetAppConfig() (*AppConfig, error) {
 	var config AppConfig
-	err := Pool.QueryRow(ctx, query).Scan(
-		&config.ID, &config.Name, &config.Version,
-		&config.CreatedAt, &config.UpdatedAt,
-	)
-
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+	result := DB.First(&config, 1)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, ErrConfigNotFound
 		}
-		return nil, fmt.Errorf("query failed: %w", err)
+		return nil, fmt.Errorf("query failed: %w", result.Error)
 	}
-
 	return &config, nil
 }

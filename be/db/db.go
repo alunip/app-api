@@ -1,19 +1,18 @@
 package db
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-var Pool *pgxpool.Pool
+var DB *gorm.DB
 
-// Config holds database configuration
 type Config struct {
 	Host            string
 	Port            string
@@ -26,7 +25,6 @@ type Config struct {
 	ConnMaxLifetime time.Duration
 }
 
-// LoadConfig loads database configuration from environment variables
 func LoadConfig() *Config {
 	return &Config{
 		Host:            getEnv("DB_HOST", "localhost"),
@@ -41,51 +39,44 @@ func LoadConfig() *Config {
 	}
 }
 
-// Connect establishes a connection pool to the database
-func Connect(ctx context.Context, config *Config) (*pgxpool.Pool, error) {
+func Connect(config *Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		config.Host, config.Port, config.User, config.Password, config.Database, config.SSLMode,
 	)
 
-	poolConfig, err := pgxpool.ParseConfig(dsn)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse database config: %w", err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Configure connection pool
-	poolConfig.MaxConns = int32(config.MaxOpenConns)
-	poolConfig.MinConns = int32(config.MaxIdleConns)
-	poolConfig.MaxConnLifetime = config.ConnMaxLifetime
-	poolConfig.MaxConnIdleTime = 10 * time.Minute
-	poolConfig.HealthCheckPeriod = 1 * time.Minute
-
-	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
+	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create connection pool: %w", err)
+		return nil, fmt.Errorf("failed to get underlying db: %w", err)
 	}
 
-	// Verify connection
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
+	sqlDB.SetMaxOpenConns(config.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(config.MaxIdleConns)
+	sqlDB.SetConnMaxLifetime(config.ConnMaxLifetime)
+
+	if err := sqlDB.Ping(); err != nil {
+		sqlDB.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	log.Printf("Database connection established (max: %d, idle: %d)",
-		config.MaxOpenConns, config.MaxIdleConns)
-
-	return pool, nil
+	log.Printf("Database connection established (max: %d, idle: %d)", config.MaxOpenConns, config.MaxIdleConns)
+	return db, nil
 }
 
-// Close closes the database connection pool
 func Close() {
-	if Pool != nil {
-		Pool.Close()
-		log.Println("Database connection pool closed")
+	if DB != nil {
+		sqlDB, err := DB.DB()
+		if err == nil {
+			sqlDB.Close()
+			log.Println("Database connection closed")
+		}
 	}
 }
-
-// Helper functions (matching the pattern in main.go)
 
 func getEnv(key, defaultValue string) string {
 	value := os.Getenv(key)

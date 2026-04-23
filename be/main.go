@@ -14,10 +14,6 @@ import (
 )
 
 func main() {
-	// Create context for initialization
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
 	// Load database configuration
 	dbConfig := db.LoadConfig()
 
@@ -29,11 +25,11 @@ func main() {
 
 	// Connect to database
 	log.Println("Connecting to database...")
-	pool, err := db.Connect(ctx, dbConfig)
+	gormDB, err := db.Connect(dbConfig)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	db.Pool = pool
+	db.DB = gormDB
 	defer db.Close()
 
 	// Get port from environment or default to 8080
@@ -73,11 +69,9 @@ func main() {
 
 	log.Println("Shutting down server...")
 
-	// Create context with timeout for shutdown
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
-	// Attempt graceful shutdown
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
