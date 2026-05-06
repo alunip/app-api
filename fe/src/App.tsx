@@ -35,7 +35,7 @@ function App() {
 
   return (
     <div className="app">
-      <h1>{t('config.title')}</h1>
+      <h1 className='text-red-500'>{t('config.title')}</h1>
       <div className="config-info">
         <p><strong>{t('config.name')}:</strong> {data.name}</p>
         <p><strong>{t('config.version')}:</strong> {data.version}</p>
