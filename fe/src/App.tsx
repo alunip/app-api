@@ -1,13 +1,15 @@
 import './App.css'
+import { useTranslation } from 'react-i18next'
 import { useConfig } from './hooks/useConfig'
 
 function App() {
+  const { t } = useTranslation()
   const { data, loading, error, refetch } = useConfig()
 
   if (loading) {
     return (
       <div className="app">
-        <h1>Loading configuration...</h1>
+        <h1>{t('loading')}</h1>
       </div>
     )
   }
@@ -15,9 +17,9 @@ function App() {
   if (error) {
     return (
       <div className="app">
-        <h1>Error loading configuration</h1>
+        <h1>{t('error.title')}</h1>
         <p style={{ color: 'red' }}>{error.message}</p>
-        <button onClick={refetch}>Retry</button>
+        <button onClick={refetch}>{t('error.retry')}</button>
       </div>
     )
   }
@@ -25,20 +27,20 @@ function App() {
   if (!data) {
     return (
       <div className="app">
-        <h1>No configuration data available</h1>
-        <button onClick={refetch}>Retry</button>
+        <h1>{t('noData.title')}</h1>
+        <button onClick={refetch}>{t('error.retry')}</button>
       </div>
     )
   }
 
   return (
     <div className="app">
-      <h1>Application Configuration</h1>
+      <h1>{t('config.title')}</h1>
       <div className="config-info">
-        <p><strong>Name:</strong> {data.name}</p>
-        <p><strong>Version:</strong> {data.version}</p>
+        <p><strong>{t('config.name')}:</strong> {data.name}</p>
+        <p><strong>{t('config.version')}:</strong> {data.version}</p>
       </div>
-      <button onClick={refetch}>Refresh Configuration</button>
+      <button onClick={refetch}>{t('config.refresh')}</button>
     </div>
   )
 }

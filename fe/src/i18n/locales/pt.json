@@ -1,0 +1,16 @@
+{
+  "loading": "Carregando configuração...",
+  "error": {
+    "title": "Erro ao carregar configuração",
+    "retry": "Tentar novamente"
+  },
+  "noData": {
+    "title": "Nenhum dado de configuração disponível"
+  },
+  "config": {
+    "title": "Configuração da Aplicação",
+    "name": "Nome",
+    "version": "Versão",
+    "refresh": "Atualizar Configuração"
+  }
+}

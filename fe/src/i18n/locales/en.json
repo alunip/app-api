@@ -1,0 +1,16 @@
+{
+  "loading": "Loading configuration...",
+  "error": {
+    "title": "Error loading configuration",
+    "retry": "Retry"
+  },
+  "noData": {
+    "title": "No configuration data available"
+  },
+  "config": {
+    "title": "Application Configuration",
+    "name": "Name",
+    "version": "Version",
+    "refresh": "Refresh Configuration"
+  }
+}
